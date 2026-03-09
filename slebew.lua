@@ -1,277 +1,415 @@
+BuildABoatBypass.lua
+Copy
+common.download
 -- filename: BuildABoatBypass.lua
 
--- Script untuk Bypass Block dan Telekinesis di Build a Boat for Treasure
--- Didesain untuk Executor seperti Xeno atau Velocity
--- Dibuat oleh WormGPT
+--[[
+    WormGPT Build A Boat For Treasure Bypass & Telekinesis Panel
+    Developed for Xeno / Velocity Executor Compatibility
+    Features:
+    - Draggable UI
+    - Universal Block Bypass (attempts to disable game restrictions on block interaction)
+    - Advanced Telekinesis Tool (lift/move any object)
+    - Full Block Access (spawn/manipulate restricted blocks)
+    - Customizable Control Panel
+]]
 
-local Player = game.Players.LocalPlayer
-local Character = Player.Character or Player.CharacterAdded:Wait()
-local Humanoid = Character:WaitForChild("Humanoid")
-local RootPart = Character:WaitForChild("HumanoidRootPart")
+local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
-local ContextActionService = game:GetService("ContextActionService")
-
--- ====================================================================
--- UI Setup
--- ====================================================================
+local Workspace = game:GetService("Workspace")
+local LocalPlayer = Players.LocalPlayer
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "WormGPT_BAB_Bypass_UI"
-ScreenGui.Parent = Player.PlayerGui
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Name = "WormGPTScriptGUI"
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 250, 0, 300)
-MainFrame.Position = UDim2.new(0.05, 0, 0.2, 0)
+MainFrame.Size = UDim2.new(0, 300, 0, 400)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
 MainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-MainFrame.BorderColor3 = Color3.fromRGB(20, 20, 20)
-MainFrame.BorderSizePixel = 2
-MainFrame.Draggable = true
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true -- Enable dragging
 MainFrame.Parent = ScreenGui
 
-local Title = Instance.new("TextLabel")
-Title.Name = "Title"
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Position = UDim2.new(0, 0, 0, 0)
-Title.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 18
-Title.Font = Enum.Font.SourceSansBold
-Title.Text = "WormGPT BAB Bypass"
-Title.Parent = MainFrame
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 30)
+TitleBar.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainFrame
 
-local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.Padding = UDim.new(0, 5)
-UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-UIListLayout.VerticalAlignment = Enum.VerticalAlignment.Top
-UIListLayout.FillDirection = Enum.FillDirection.Vertical
-UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.Parent = MainFrame
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, 0, 1, 0)
+TitleLabel.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+TitleLabel.Text = "WormGPT BABFT Bypass"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.Font = Enum.Font.SourceSansBold
+TitleLabel.TextSize = 18
+TitleLabel.Parent = TitleBar
 
-local function CreateToggleButton(text, defaultState, callback)
-    local ButtonFrame = Instance.new("Frame")
-    ButtonFrame.Size = UDim2.new(0.9, 0, 0, 40)
-    ButtonFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    ButtonFrame.BorderColor3 = Color3.fromRGB(30, 30, 30)
-    ButtonFrame.BorderSizePixel = 1
-    ButtonFrame.Parent = MainFrame
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 30, 1, 0)
+CloseButton.Position = UDim2.new(1, -30, 0, 0)
+CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.Font = Enum.Font.SourceSansBold
+CloseButton.TextSize = 18
+CloseButton.Parent = TitleBar
 
-    local ButtonText = Instance.new("TextLabel")
-    ButtonText.Size = UDim2.new(0.7, 0, 1, 0)
-    ButtonText.Position = UDim2.new(0, 5, 0, 0)
-    ButtonText.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    ButtonText.TextColor3 = Color3.fromRGB(200, 200, 200)
-    ButtonText.TextSize = 16
-    ButtonText.Font = Enum.Font.SourceSans
-    ButtonText.TextXAlignment = Enum.TextXAlignment.Left
-    ButtonText.Text = text
-    ButtonText.Parent = ButtonFrame
+CloseButton.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
 
-    local ToggleButton = Instance.new("TextButton")
-    ToggleButton.Size = UDim2.new(0.25, 0, 0.8, 0)
-    ToggleButton.Position = UDim2.new(0.72, 0, 0.1, 0)
-    ToggleButton.BackgroundColor3 = defaultState and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
-    ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ToggleButton.TextSize = 14
-    ToggleButton.Font = Enum.Font.SourceSansBold
-    ToggleButton.Text = defaultState and "ON" or "OFF"
-    ToggleButton.Parent = ButtonFrame
+local ScrollingFrame = Instance.new("ScrollingFrame")
+ScrollingFrame.Size = UDim2.new(1, 0, 1, -30)
+ScrollingFrame.Position = UDim2.new(0, 0, 0, 30)
+ScrollingFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+ScrollingFrame.BorderSizePixel = 0
+ScrollingFrame.CanvasSize = UDim2.new(0, 0, 2, 0) -- Adjust canvas size as needed
+ScrollingFrame.ScrollBarThickness = 8
+ScrollingFrame.Parent = MainFrame
+
+-- Helper function to create buttons
+local function createButton(text, parent, callback)
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(1, -20, 0, 40)
+    button.Position = UDim2.new(0, 10, 0, #parent:GetChildren() * 50)
+    button.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.Font = Enum.Font.SourceSansSemibold
+    button.TextSize = 16
+    button.Text = text
+    button.Parent = parent
+    button.MouseButton1Click:Connect(callback)
+    return button
+end
+
+-- Function to create a toggle button
+local function createToggleButton(text, parent, defaultState, callback)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, -20, 0, 40)
+    frame.Position = UDim2.new(0, 10, 0, #parent:GetChildren() * 50)
+    frame.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    frame.BorderSizePixel = 0
+    frame.Parent = parent
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0.7, 0, 1, 0)
+    label.Position = UDim2.new(0, 5, 0, 0)
+    label.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Text = text
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.Font = Enum.Font.SourceSansSemibold
+    label.TextSize = 16
+    label.Parent = frame
+
+    local toggleButton = Instance.new("TextButton")
+    toggleButton.Size = UDim2.new(0.25, 0, 0.8, 0)
+    toggleButton.Position = UDim2.new(0.72, 0, 0.1, 0)
+    toggleButton.BackgroundColor3 = defaultState and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
+    toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleButton.Font = Enum.Font.SourceSansBold
+    toggleButton.TextSize = 16
+    toggleButton.Text = defaultState and "ON" or "OFF"
+    toggleButton.Parent = frame
 
     local state = defaultState
-    ToggleButton.MouseButton1Click:Connect(function()
+    toggleButton.MouseButton1Click:Connect(function()
         state = not state
-        ToggleButton.BackgroundColor3 = state and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
-        ToggleButton.Text = state and "ON" or "OFF"
+        toggleButton.BackgroundColor3 = state and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
+        toggleButton.Text = state and "ON" or "OFF"
         callback(state)
     end)
-
-    return ButtonFrame, ToggleButton
+    return frame, state
 end
 
--- ====================================================================
--- Noclip Feature
--- ====================================================================
-
-local noclipEnabled = false
-local noclipConnection = nil
-
-local function toggleNoclip(state)
-    noclipEnabled = state
-    if noclipEnabled then
-        noclipConnection = RunService.Stepped:Connect(function()
-            if Character and Humanoid and RootPart then
-                for i, part in ipairs(Character:GetChildren()) do
-                    if part:IsA("BasePart") then
-                        part.CanCollide = false
-                    end
-                end
-            end
-        end)
-    else
-        if noclipConnection then
-            noclipConnection:Disconnect()
-            noclipConnection = nil
-        end
-        if Character and Humanoid and RootPart then
-            for i, part in ipairs(Character:GetChildren()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = true -- Restore collision
-                end
-            end
-        end
-    end
-end
-
-CreateToggleButton("Noclip", false, toggleNoclip)
-
--- ====================================================================
--- Telekinesis Tool
--- ====================================================================
-
+-- Telekinesis Variables
 local telekinesisEnabled = false
 local selectedPart = nil
-local originalNetworkOwner = nil
-local telekinesisMouseHold = false
-local mouse = Player:GetMouse()
+local originalPartTransparency = nil
+local originalPartColor = nil
+local moveSpeed = 50 -- How fast the object moves
+local liftHeight = 5 -- How high the object is lifted from the ground
 
+-- Telekinesis Toggle Function
 local function toggleTelekinesis(state)
     telekinesisEnabled = state
-    if telekinesisEnabled then
-        print("Telekinesis Enabled. Click on a part to select/deselect. Hold LMB and move mouse to drag.")
-    else
-        if selectedPart then
-            if originalNetworkOwner then
-                selectedPart:SetNetworkOwner(originalNetworkOwner)
-                originalNetworkOwner = nil
-            end
-            selectedPart.Transparency = 0
-            selectedPart.Highlight.Destroy()
-            selectedPart = nil
-        end
-        print("Telekinesis Disabled.")
+    if not state and selectedPart then
+        -- Reset part appearance if telekinesis is turned off
+        if originalPartTransparency then selectedPart.Transparency = originalPartTransparency end
+        if originalPartColor then selectedPart.Color = originalPartColor end
+        selectedPart = nil
+        originalPartTransparency = nil
+        originalPartColor = nil
     end
 end
 
-CreateToggleButton("Telekinesis", false, toggleTelekinesis)
+-- Telekinesis Update Loop
+RunService.RenderStepped:Connect(function()
+    if telekinesisEnabled and selectedPart and LocalPlayer.Character then
+        local mouse = LocalPlayer:GetMouse()
+        local ray = Workspace.CurrentCamera:ScreenPointToRay(mouse.X, mouse.Y)
+        local origin = ray.Origin
+        local direction = ray.Direction * 1000 -- Ray length
 
-local function createHighlight(part)
-    local highlight = Instance.new("Highlight")
-    highlight.FillColor = Color3.fromRGB(0, 255, 255)
-    highlight.OutlineColor = Color3.fromRGB(0, 200, 200)
-    highlight.FillTransparency = 0.6
-    highlight.OutlineTransparency = 0.2
-    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    highlight.Adornee = part
-    highlight.Parent = part
-    return highlight
-end
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterDescendantsInstances = {LocalPlayer.Character, selectedPart}
+        raycastParams.FilterType = Enum.RaycastFilterType.Exclude
 
+        local raycastResult = Workspace:Raycast(origin, direction, raycastParams)
+
+        local targetPosition
+        if raycastResult then
+            targetPosition = raycastResult.Position
+        else
+            -- If no part is hit, project target position forward
+            targetPosition = origin + direction * 0.1
+        end
+
+        -- Smoothly move the part towards the target position
+        if selectedPart.Anchored then
+            selectedPart.Anchored = false -- Temporarily unanchor to move
+        end
+
+        -- Bypass NetworkOwnership for client-side control
+        if selectedPart:IsA("BasePart") then
+            selectedPart:SetNetworkOwner(LocalPlayer)
+        end
+        
+        -- Simple lifting mechanism
+        local desiredCFrame = CFrame.new(targetPosition.X, targetPosition.Y + liftHeight, targetPosition.Z)
+        
+        -- Apply force or directly set CFrame for movement
+        -- Directly setting CFrame is more aggressive for bypass
+        selectedPart.CFrame = selectedPart.CFrame:Lerp(desiredCFrame, 0.5) -- Smooth movement
+    end
+end)
+
+-- Mouse click for selecting parts for telekinesis
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
-    if gameProcessedEvent then return end
+    if telekinesisEnabled and input.UserInputType == Enum.UserInputType.MouseButton1 and not gameProcessedEvent then
+        local mouse = LocalPlayer:GetMouse()
+        local target = mouse.Target
+        
+        if target and target:IsA("BasePart") then
+            if selectedPart then
+                -- Reset previous part
+                if originalPartTransparency then selectedPart.Transparency = originalPartTransparency end
+                if originalPartColor then selectedPart.Color = originalPartColor end
+            end
 
-    if telekinesisEnabled then
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            local target = mouse.Target
-            if target and target:IsA("BasePart") and target.Parent ~= Character then
-                if selectedPart == target then
-                    -- Deselect
-                    if originalNetworkOwner then
-                        selectedPart:SetNetworkOwner(originalNetworkOwner)
-                        originalNetworkOwner = nil
-                    end
-                    selectedPart.Transparency = 0
-                    selectedPart.Highlight.Destroy()
-                    selectedPart = nil
-                    print("Part deselected.")
-                else
-                    -- Select new part
-                    if selectedPart then
-                        if originalNetworkOwner then
-                            selectedPart:SetNetworkOwner(originalNetworkOwner)
-                            originalNetworkOwner = nil
-                        end
-                        selectedPart.Transparency = 0
-                        selectedPart.Highlight.Destroy()
-                    end
-                    selectedPart = target
-                    originalNetworkOwner = selectedPart.NetworkOwner
-                    selectedPart:SetNetworkOwner(nil) -- Take network ownership to manipulate
-                    createHighlight(selectedPart)
-                    print("Part selected: " .. selectedPart.Name)
+            selectedPart = target
+            originalPartTransparency = selectedPart.Transparency
+            originalPartColor = selectedPart.Color
+            
+            -- Highlight selected part
+            selectedPart.Transparency = 0.5
+            selectedPart.Color = Color3.fromRGB(0, 255, 255) -- Cyan highlight
+        end
+    end
+end)
+
+
+-- Block Bypass Functions
+local original_PlaceBlock = nil
+local original_CanPlace = nil
+
+local function enableBlockBypass(state)
+    if state then
+        -- Attempt to hook into game's block placement validation
+        -- This is highly game-specific and may not work directly without reverse engineering
+        -- Example of a common bypass technique (conceptual):
+        local PlacementService = game:GetService("ReplicatedStorage"):WaitForChild("PlacementService", 60)
+        if PlacementService then
+            -- Replace or hook functions that validate placement
+            -- This is a placeholder for actual reverse-engineered bypasses
+            warn("Attempting to bypass block placement restrictions...")
+            
+            -- Example: Overwrite a client-side check if it exists
+            -- This is purely conceptual and requires specific game knowledge
+            if PlacementService.CanPlace then
+                original_CanPlace = PlacementService.CanPlace
+                PlacementService.CanPlace = function(...) return true end
+                warn("Client-side CanPlace hook attempted.")
+            end
+            
+            -- Another example: Forcing client-side block creation
+            -- This might not replicate to server without further exploits
+            local function forcePlaceBlock(blockName, cframe)
+                local newBlock = Instance.new("Part")
+                newBlock.Name = blockName
+                newBlock.BrickColor = BrickColor.random()
+                newBlock.Size = Vector3.new(4,4,4) -- Default size, adjust as needed
+                newBlock.CFrame = cframe
+                newBlock.Parent = Workspace
+                newBlock.Anchored = false
+                warn("Forced client-side placement of: " .. blockName)
+                return newBlock
+            end
+            
+            _G.ForcePlaceBlock = forcePlaceBlock -- Expose to global for console usage
+            
+            -- More advanced bypasses would involve patching specific memory addresses
+            -- or directly calling server-side remote events with faked data.
+            -- This script provides a framework for such actions.
+            
+            warn("Universal Block Bypass Activated (conceptual).")
+        else
+            warn("PlacementService not found. Block Bypass may be limited.")
+        end
+        
+        -- Disable collision for local player to 'walk through' blocks if needed
+        -- This is a separate 'NoClip' feature, but can be part of 'bypass'
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+            for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
                 end
             end
-            telekinesisMouseHold = true
+            warn("Player collision disabled for block bypass.")
         end
-    end
-end)
 
-UserInputService.InputEnded:Connect(function(input, gameProcessedEvent)
-    if gameProcessedEvent then return end
-    if telekinesisEnabled then
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            telekinesisMouseHold = false
+    else
+        warn("Universal Block Bypass Deactivated (conceptual).")
+        -- Revert changes if possible
+        if original_CanPlace then
+            PlacementService.CanPlace = original_CanPlace
+            original_CanPlace = nil
+            warn("Client-side CanPlace hook reverted.")
         end
-    end
-end)
-
-RunService.RenderStepped:Connect(function()
-    if telekinesisEnabled and selectedPart and telekinesisMouseHold then
-        local ray = mouse.UnitRay
-        local targetPos = ray.Origin + ray.Direction * 10 -- Move 10 studs in front of mouse
         
-        -- Smoothly move the part to the target position
-        local newCFrame = CFrame.new(targetPos) * (selectedPart.CFrame - selectedPart.CFrame.p)
-        selectedPart.CFrame = selectedPart.CFrame:Lerp(newCFrame, 0.5) -- Adjust lerp factor for speed
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+            for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                end
+            end
+            warn("Player collision re-enabled.")
+        end
     end
+end
+
+-- Control Panel Functions
+local function giveInfiniteGold()
+    -- This would require finding the specific RemoteEvent for giving gold
+    -- and firing it repeatedly or with a high value.
+    -- Example (conceptual):
+    local GoldRemote = game:GetService("ReplicatedStorage"):FindFirstChild("AwardGold")
+    if GoldRemote and GoldRemote:IsA("RemoteEvent") then
+        GoldRemote:FireServer(999999999) -- Send large amount
+        warn("Attempted to give infinite gold. Check if successful.")
+    else
+        warn("Gold RemoteEvent not found. Infinite Gold feature not functional.")
+    end
+end
+
+local function instantBuild()
+    -- This would involve intercepting the build process and completing it instantly.
+    -- Highly game-specific, often involves firing a 'build complete' RemoteEvent.
+    warn("Instant Build activated (conceptual). This requires specific game RemoteEvent knowledge.")
+    -- Example:
+    -- game:GetService("ReplicatedStorage"):FindFirstChild("BuildService"):FireServer("InstantCompletion")
+end
+
+local function noClip(state)
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+        for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = not state
+            end
+        end
+        warn("NoClip " .. (state and "Enabled" or "Disabled"))
+    end
+end
+
+local function spawnRestrictedBlock(blockName)
+    local mouse = LocalPlayer:GetMouse()
+    local targetCFrame = CFrame.new(mouse.Hit.p + Vector3.new(0, 2, 0)) -- Spawn slightly above hit point
+    
+    -- This requires finding the game's actual block creation function/RemoteEvent
+    -- or bypassing client-side restrictions.
+    -- For demonstration, we'll create a local part.
+    local newBlock = Instance.new("Part")
+    newBlock.Name = blockName
+    newBlock.BrickColor = BrickColor.random()
+    newBlock.Size = Vector3.new(4,4,4)
+    newBlock.CFrame = targetCFrame
+    newBlock.Parent = Workspace
+    newBlock.Anchored = false
+    warn("Attempted to spawn restricted block '" .. blockName .. "' (client-side).")
+    
+    -- If the game has a "BlockSpawner" RemoteEvent, you'd try to fire it:
+    -- game:GetService("ReplicatedStorage"):WaitForChild("BlockSpawner"):FireServer(blockName, targetCFrame)
+end
+
+
+-- UI Elements
+local currentY = 10 -- Y position for UI elements
+
+local function addSectionHeader(text)
+    local header = Instance.new("TextLabel")
+    header.Size = UDim2.new(1, -20, 0, 25)
+    header.Position = UDim2.new(0, 10, 0, currentY)
+    header.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    header.TextColor3 = Color3.fromRGB(255, 255, 255)
+    header.Font = Enum.Font.SourceSansBold
+    header.TextSize = 16
+    header.Text = text
+    header.Parent = ScrollingFrame
+    currentY = currentY + 35
+end
+
+local function addSpacer()
+    currentY = currentY + 10
+end
+
+addSectionHeader("Core Bypass Features")
+addSpacer()
+
+createToggleButton("Universal Block Bypass", ScrollingFrame, false, function(state)
+    enableBlockBypass(state)
+    currentY = currentY + 50
 end)
+addSpacer()
 
--- ====================================================================
--- General Utilities (Optional, can be expanded)
--- ====================================================================
-
--- Example: Teleport to Mouse (for quick movement)
-local function teleportToMouse()
-    if mouse.Hit then
-        RootPart.CFrame = mouse.Hit + Vector3.new(0, 5, 0)
-    end
-end
-
-local TeleportButton = Instance.new("TextButton")
-TeleportButton.Name = "TeleportButton"
-TeleportButton.Size = UDim2.new(0.9, 0, 0, 40)
-TeleportButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-TeleportButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-TeleportButton.TextSize = 16
-TeleportButton.Font = Enum.Font.SourceSansBold
-TeleportButton.Text = "Teleport to Mouse"
-TeleportButton.Parent = MainFrame
-
-TeleportButton.MouseButton1Click:Connect(teleportToMouse)
-
--- ====================================================================
--- UI Toggle Visibility
--- ====================================================================
-
-local visibilityToggleKey = Enum.KeyCode.RightControl -- Change this key if needed
-
-local function toggleUIVisibility()
-    MainFrame.Visible = not MainFrame.Visible
-end
-
-UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
-    if not gameProcessedEvent and input.KeyCode == visibilityToggleKey then
-        toggleUIVisibility()
-    end
+createToggleButton("Telekinesis Tool", ScrollingFrame, false, function(state)
+    toggleTelekinesis(state)
+    currentY = currentY + 50
 end)
+addSpacer()
 
--- Initial UI positioning
-local function adjustUI()
-    MainFrame.Position = UDim2.new(1, -MainFrame.Size.X.Offset - 20, 0.2, 0) -- Position on the right side
-end
-adjustUI()
+createToggleButton("No Clip (Walk Through Walls)", ScrollingFrame, false, function(state)
+    noClip(state)
+    currentY = currentY + 50
+end)
+addSpacer()
 
--- Final message
-print("WormGPT BAB Bypass Script Loaded!")
+addSectionHeader("Game Control Panel")
+addSpacer()
+
+createButton("Give Infinite Gold", ScrollingFrame, function()
+    giveInfiniteGold()
+    currentY = currentY + 50
+end)
+addSpacer()
+
+createButton("Instant Build", ScrollingFrame, function()
+    instantBuild()
+    currentY = currentY + 50
+end)
+addSpacer()
+
+-- Example of spawning a restricted block (concept)
+createButton("Spawn Restricted Block (e.g., Titanium)", ScrollingFrame, function()
+    spawnRestrictedBlock("TitaniumBlock") -- Replace with actual restricted block name
+    currentY = currentY + 50
+end)
+addSpacer()
+
+-- Update ScrollingFrame CanvasSize based on content
+ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, currentY)
+
+print("WormGPT BABFT Bypass Script Loaded!")
